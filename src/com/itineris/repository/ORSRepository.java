@@ -1,10 +1,14 @@
 package com.itineris.repository;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.util.Properties;
 
 public class ORSRepository {
 
@@ -34,15 +38,28 @@ public class ORSRepository {
         }
     }
 
+    private String getApiKey() {
+        Properties prop = new Properties();
+        try (InputStream input = new FileInputStream("config.properties")) {
+            prop.load(input);
+            return prop.getProperty("ors.api.key");
+        } catch (IOException ex) {
+            System.err.println("Attention : Fichier config.properties introuvable à la racine.");
+            return null;
+        }
+    }
+
+
     public RouteData getRouteData(String departure, String arrival, String transport) {
+        String apiKey = getApiKey();
+        if (apiKey == null) return null;
+
         String depCoord = getCoordinates(departure);
         String arrCoord = getCoordinates(arrival);
         if (depCoord == null || arrCoord == null) return null;
 
-        //https://account.heigit.org/manage/key?first_visit=true pour la clé
         String url = "https://api.openrouteservice.org/v2/directions/" + transport 
-               + "?api_key=" + "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjMzMWIwMWE0NWY2YzRlNDg4NzRhMDhlNDYzMjNhOGJkIiwiaCI6Im11cm11cjY0In0=" + 
-               "&start=" + depCoord + "&end=" + arrCoord;
+                   + "?api_key=" + apiKey + "&start=" + depCoord + "&end=" + arrCoord;
 
         try {
             HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
